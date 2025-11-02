@@ -1,0 +1,8 @@
+Package: Fib
+Version: 1.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: g++, build-essential
+Maintainer: alekseibaruzdin@gmail.com
+Description: Fibonacci numbers

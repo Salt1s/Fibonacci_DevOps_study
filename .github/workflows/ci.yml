@@ -71,7 +71,7 @@ jobs:
         with:
           name: fibonacci-deb
           path: fibonacci.deb
-    RunDeploy:
+  RunDeploy:
     needs: RunPackage
     runs-on: ubuntu-latest
     steps:

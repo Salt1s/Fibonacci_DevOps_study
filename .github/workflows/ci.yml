@@ -1,0 +1,73 @@
+name: CI Pipeline
+on:
+  push:
+    branches:
+      - main
+jobs:
+  RunMake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y build-essential dpkg
+
+      - name: Run Make
+        run: |
+          cd src
+          make || { echo "Make failed"; exit 1; }
+          ls -l
+          mkdir -p ../artifacts
+          cp ../usr/bin/fibonacci ../artifacts/ || { echo "Failed to copy fibonacci to artifacts"; exit 1; }
+
+      - name: Upload Artifact (Binary)
+        uses: actions/upload-artifact@v4
+        with:
+          name: fibonacci-binary
+          path: artifacts/
+  RunTest:
+    needs: RunMake
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: fibonacci-binary
+          path: artifacts/
+      - name: Run Tests
+        run: |
+          chmod +x artifacts/fibonacci
+          echo "Running fibonacci with argument 5"
+          ./artifacts/fibonacci 5
+          echo "Running fibonacci with argument 1"
+          ./artifacts/fibonacci 1
+          echo "Running fibonacci with argument 20"
+          ./artifacts/fibonacci 20
+  RunPackage:
+    needs: RunTest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: fibonacci-binary
+          path: artifacts/
+
+      - name: Create Debian Package
+        run: |
+          mkdir -p artifacts/deb/usr/local/bin
+          mkdir -p artifacts/deb/DEBIAN
+          cp DEBIAN/control artifacts/deb/DEBIAN/
+          cp artifacts/fibonacci artifacts/deb/usr/local/bin/
+          dpkg-deb --build artifacts/deb fibonacci.deb
+      - name: Upload Debian Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: fibonacci-deb
+          path: fibonacci.deb

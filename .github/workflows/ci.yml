@@ -13,33 +13,39 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y build-essential dpkg git cmake libcurl4-openssl-dev
+          sudo apt install -y build-essential g++ cmake git libcurl4-openssl-dev
 
-      - name: Install prometheus-cpp
+      - name: Install Prometheus C++ Client
         run: |
-          git clone https://github.com/jupp0r/prometheus-cpp.git
+          git clone --recursive https://github.com/jupp0r/prometheus-cpp.git
           cd prometheus-cpp
-          git submodule init
-          git submodule update
           mkdir build && cd build
-          cmake .. -DBUILD_SHARED_LIBS=ON
-          make -j 4
+          cmake .. -DBUILD_SHARED_LIBS=ON -DENABLE_BENCHMARK=OFF -DCMAKE_INSTALL_PREFIX=/usr
+          make -j$(nproc)
           sudo make install
-          sudo ldconfig
+          sudo ldconfig  # Обновляем кэш ldconfig
 
-      - name: Run Make
+      - name: Verify Prometheus C++ Client Installation
+        run: |
+          find /usr/lib -name "libprometheus-cpp*" || echo "Library not found!"
+          ldconfig -p | grep prometheus-cpp || echo "Library not found in ldconfig!"
+
+      - name: Build Project
         run: |
           cd src
           make || { echo "Make failed"; exit 1; }
-          ls -l
-          mkdir -p ../artifacts
-          cp ../usr/bin/fibonacci ../artifacts/ || { echo "Failed to copy fibonacci to artifacts"; exit 1; }
+          mkdir -p ../artifacts  # Создаем папку для артефактов
+          cp fibonacci ../artifacts/  # Копируем бинарный файл в папку artifacts
+          ls -l ../artifacts  # Проверяем, что файл скопирован
+          mkdir -p ../usr/bin
+          cp fibonacci ../usr/bin/  # Копируем бинарный файл в папку usr/bin
+          rm -f fibonacci  # Удаляем файл после копирования
 
-      - name: Upload Artifact (Binary)
+      - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
           name: fibonacci-binary
-          path: artifacts/
+          path: artifacts/fibonacci
 
   RunTest:
     needs: RunMake

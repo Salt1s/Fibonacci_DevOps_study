@@ -14,33 +14,31 @@ RUN git clone --recursive https://github.com/jupp0r/prometheus-cpp.git && \
     make -j$(nproc) && \
     make install
 
-RUN ls -l /usr/local/bin
+RUN ldconfig
 
-COPY fibonacci.deb /tmp/fibonacci.deb
-RUN dpkg -i /tmp/fibonacci.deb || apt-get install -f -y
+# Копируем исходный код и собираем приложение
+COPY src/Fibi.cpp /app/
+WORKDIR /app
 
-RUN ls -l /usr/local/bin
-
-RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/prometheus-cpp.conf && ldconfig
+RUN g++ -Wall -Wextra -O2 -std=c++11 -I/usr/local/include Fibi.cpp -o fibonacci \
+    -L/usr/local/lib -lprometheus-cpp-core -lprometheus-cpp-pull -lprometheus-cpp-push -lcurl -lz
 
 FROM ubuntu:latest
 
 RUN apt-get update && apt-get install -y \
     libcurl4 \
-    zlib1g
+    zlib1g \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /usr/local/bin/fibonacci /usr/local/bin/fibonacci
-
-COPY --from=builder /usr/local/lib/libprometheus-cpp-core.so* /usr/local/lib/
-COPY --from=builder /usr/local/lib/libprometheus-cpp-pull.so* /usr/local/lib/
-COPY --from=builder /usr/local/lib/libprometheus-cpp-push.so* /usr/local/lib/
+COPY --from=builder /app/fibonacci /usr/local/bin/fibonacci
+COPY --from=builder /usr/local/lib/libprometheus-cpp-core.so.1.1 /usr/local/lib/
+COPY --from=builder /usr/local/lib/libprometheus-cpp-pull.so.1.1 /usr/local/lib/
+COPY --from=builder /usr/local/lib/libprometheus-cpp-push.so.1.1 /usr/local/lib/
 
 RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/prometheus-cpp.conf && ldconfig
-
-RUN ls -l /usr/local/bin && ls -l /usr/local/lib
 
 RUN chmod +x /usr/local/bin/fibonacci
 
 EXPOSE 8080
 
-CMD echo "Запуск программы..." && /usr/local/bin/fibonacci || echo "Ошибка при запуске программы."
+CMD ["/usr/local/bin/fibonacci"]

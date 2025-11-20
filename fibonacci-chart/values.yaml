@@ -30,6 +30,9 @@ service:
   type: ClusterIP
   port: 8080
   targetPort: 8080
+  # Добавляем лейблы для ServiceMonitor
+  labels: {}
+  annotations: {}
 
 container:
   port: 8080
@@ -45,7 +48,6 @@ ingress:
           pathType: ImplementationSpecific
   tls: []
 
-# -- Expose the service via gateway-api HTTPRoute
 httpRoute:
   enabled: false
   annotations: {}
@@ -95,7 +97,16 @@ affinity: {}
 # ServiceMonitor for Prometheus operator
 serviceMonitor:
   enabled: true
+  # Имя порта должно совпадать с именем в сервисе
+  port: http
   metricsPath: /metrics
   interval: 30s
-  additionalLabels: {}
-  relabelings: []
+  scrapeTimeout: 10s
+  # Критически важные лейблы
+  additionalLabels:
+    release: prometheus
+  # Селектор для ServiceMonitor
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: fibonacci
+      app.kubernetes.io/name: fibonacci-chart

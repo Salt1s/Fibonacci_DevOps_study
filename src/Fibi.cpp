@@ -59,6 +59,6 @@ int main(int argc, char* argv[]) {
 
         this_thread::sleep_for(chrono::seconds(5));
     }
-    //sudo docker run --rm -p 8080:8080 salt1s/fibonacci:latest
+    //sudo docker run --rm -p 8080:8080 salt1s/fibonacci:latest - запуск программы 
     return 0;
 }
